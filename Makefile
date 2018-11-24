@@ -10,8 +10,8 @@ OBJFILES:=$(patsubst %.cpp,${OBJDIR}/%.o,${TEST_SRCS})
 
 .PHONY: example clean
 
-example: $(OBJDIR)/main.o
-	$(CC) $(CPP_FLAGS) $(OBJDIR)/main.o $(LINK_FLAGS) -o example
+example: $(OBJDIR)/main.o $(OBJDIR)/md5.o $(OBJDIR)/sha256.o
+	$(CC) $(CPP_FLAGS) $(OBJDIR)/main.o $(OBJDIR)/md5.o $(OBJDIR)/sha256.o $(LINK_FLAGS) -o example
 
 test: $(OBJFILES)
 	$(CC) $(CPP_FLAGS) $(OBJFILES) $(LINK_FLAGS) -o test
