@@ -6,6 +6,9 @@
 
 CATCH_TEST_CASE("Md5Sum_", "[md5_sum]")
 {
+   static_assert(std::is_nothrow_move_constructible<MD5>::value,
+                 "MD5 should be noexcept MoveConstructible");
+
    //
    // -------------------------------------------------------
    //

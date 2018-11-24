@@ -6,6 +6,9 @@
 
 CATCH_TEST_CASE("Sha256Sum_", "[sha256_sum]")
 {
+   static_assert(std::is_nothrow_move_constructible<Sha256>::value,
+                 "Sha256 should be noexcept MoveConstructible");
+
    //
    // -------------------------------------------------------
    //

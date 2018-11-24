@@ -50,29 +50,29 @@
 // usage: 1) feed data with append()
 //        2) get hexdigest() string
 //      or
-//           MD5(std::string).hexdigest()
+//           MD5(std::string_view).hexdigest()
 //
 // assumes that char is 8 bit and int is 32 bit
 class MD5
 {
  public:
-   MD5();
-   MD5(const std::string& text);
+   MD5() noexcept;
+   MD5(std::string_view text) noexcept;
 
-   void append(const std::string& text);
-   void append(const unsigned char* buf, size_t length);
-   void append(const char* buf, size_t length);
-   void append(const void* buf, size_t length);
+   void append(std::string_view text) noexcept;
+   void append(const unsigned char* buf, size_t length) noexcept;
+   void append(const char* buf, size_t length) noexcept;
+   void append(const void* buf, size_t length) noexcept;
 
-   std::string hexdigest();
-   std::string hexdigest() const;
+   std::string hexdigest() noexcept;
+   std::string hexdigest() const noexcept;
 
    size_t digest_size() const noexcept; // in bytes
-   void get_digest(unsigned char hash[16]) const;
-   std::array<unsigned char, 16> get_digest() const;
+   void get_digest(unsigned char hash[16]) const noexcept;
+   std::array<unsigned char, 16> get_digest() const noexcept;
 
    // Finish called automatically
-   MD5& finish();
+   MD5& finish() noexcept;
 
  private:
    static constexpr int blocksize = 64;
@@ -84,11 +84,13 @@ class MD5
 
    bool finalized_{false};
 
-   void init_();
-   void transform_(const uint8_t block[blocksize]);
+   void init_() noexcept;
+   void transform_(const uint8_t block[blocksize]) noexcept;
+   void update_(const unsigned char* input, size_t length) noexcept;
+   MD5& do_finalize_() noexcept;
 };
 
-std::string md5(const std::string str);
+std::string md5(std::string_view str) noexcept;
 
 inline std::ostream& operator<<(std::ostream& o, MD5 hash)
 {

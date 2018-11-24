@@ -2,29 +2,30 @@
 #pragma once
 
 #include <string>
+#include <string_view>
 #include <type_traits>
 #include <vector>
 
 class Sha256
 {
  public:
-   Sha256();
-   Sha256(const std::string& text);
+   Sha256() noexcept;
+   Sha256(std::string_view text) noexcept;
 
-   void append(const std::string& text);
-   void append(const unsigned char* buf, size_t length);
-   void append(const char* buf, size_t length);
-   void append(const void* buf, size_t length);
+   void append(std::string_view text) noexcept;
+   void append(const unsigned char* buf, size_t length) noexcept;
+   void append(const char* buf, size_t length) noexcept;
+   void append(const void* buf, size_t length) noexcept;
 
-   std::string hexdigest();
-   std::string hexdigest() const;
+   std::string hexdigest() noexcept;
+   std::string hexdigest() const noexcept;
 
    size_t digest_size() const noexcept; // in bytes
-   void get_digest(uint8_t hash[32]) const;
-   std::vector<uint8_t> get_digest() const;
+   void get_digest(uint8_t hash[32]) const noexcept;
+   std::vector<uint8_t> get_digest() const noexcept;
 
    // Finish called automatically
-   Sha256& finish();
+   Sha256& finish() noexcept;
 
  private:
    using BYTE = uint8_t;
@@ -39,11 +40,11 @@ class Sha256
 
    void transform_();
    void init_();
-   void update(const BYTE dat[], size_t len);
-   void final(BYTE hash[]);
+   void update(const BYTE dat[], size_t len) noexcept;
+   void final(BYTE hash[]) noexcept;
 };
 
-std::string sha256(const std::string str);
+std::string sha256(std::string_view str) noexcept;
 
 inline std::ostream& operator<<(std::ostream& o, Sha256 hash)
 {

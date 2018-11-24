@@ -108,7 +108,7 @@ void Sha256::init_()
    state[7] = 0x5be0cd19;
 }
 
-void Sha256::update(const BYTE dat[], size_t len)
+void Sha256::update(const BYTE dat[], size_t len) noexcept
 {
    WORD i;
 
@@ -123,7 +123,7 @@ void Sha256::update(const BYTE dat[], size_t len)
    }
 }
 
-void Sha256::final(BYTE hash[])
+void Sha256::final(BYTE hash[]) noexcept
 {
    WORD i;
 
@@ -170,39 +170,39 @@ void Sha256::final(BYTE hash[])
 //  --------------------------------------------------------------- Construction
 
 // default ctor, just initailize
-Sha256::Sha256() { init_(); }
-Sha256::Sha256(const std::string& text)
+Sha256::Sha256() noexcept { init_(); }
+Sha256::Sha256(std::string_view text) noexcept
 {
    init_();
-   append(text.c_str(), text.length());
+   append(text.data(), text.length());
    finish();
 }
 
 // ---------------------------------------------------------------------- append
 
-void Sha256::append(const unsigned char input[], size_t length)
+void Sha256::append(std::string_view text) noexcept
+{
+   append(text.data(), text.size());
+}
+
+void Sha256::append(const unsigned char* input, size_t length) noexcept
 {
    update(input, length);
 }
 
-void Sha256::append(const std::string& text)
-{
-   append(text.c_str(), text.size());
-}
-
-void Sha256::append(const char input[], size_t length)
+void Sha256::append(const char* input, size_t length) noexcept
 {
    append(reinterpret_cast<const void*>(input), length);
 }
 
-void Sha256::append(const void* buf, size_t length)
+void Sha256::append(const void* buf, size_t length) noexcept
 {
    append(reinterpret_cast<const unsigned char*>(buf), length);
 }
 
 // ---------------------------------------------------------------------- finish
 
-Sha256& Sha256::finish()
+Sha256& Sha256::finish() noexcept
 {
    if(!finalized_) {
       final(digest_);
@@ -216,33 +216,35 @@ Sha256& Sha256::finish()
 
 size_t Sha256::digest_size() const noexcept { return SHA256_BLOCK_SIZE; }
 
-void Sha256::get_digest(uint8_t hash[32]) const
+void Sha256::get_digest(uint8_t hash[32]) const noexcept
 {
-   if(!finalized_) const_cast<Sha256*>(this)->finish();
+   // To make type "thread-compatible", Don't lazy-finish,
+   assert(finalized_); // You must call finish() before getting the digest
    memcpy(hash, digest_, 32);
 }
 
-std::vector<uint8_t> Sha256::get_digest() const
+std::vector<uint8_t> Sha256::get_digest() const noexcept
 {
-   std::vector<uint8_t> hash;
+   std::vector<uint8_t> hash(32);
    get_digest(&hash[0]);
    return hash;
 }
 
 // -----------------------------------------------------------------------------
 
-std::string Sha256::hexdigest()
+std::string Sha256::hexdigest() noexcept
 {
    if(!finalized_) finish();
    return static_cast<const Sha256*>(this)->hexdigest();
 }
 
-std::string Sha256::hexdigest() const
+std::string Sha256::hexdigest() const noexcept
 {
-   assert(finalized_);
+   uint8_t hash[32];
+   get_digest(hash);
 
    char buf[65];
-   for(int i = 0; i < 32; i++) sprintf(buf + i * 2, "%02x", digest_[i]);
+   for(int i = 0; i < 32; i++) sprintf(buf + i * 2, "%02x", hash[i]);
    buf[64] = 0;
 
    return std::string(buf);
@@ -250,7 +252,7 @@ std::string Sha256::hexdigest() const
 
 // -----------------------------------------------------------------------------
 
-std::string sha256(const std::string str)
+std::string sha256(std::string_view str) noexcept
 {
    Sha256 sha;
    sha.append(str);

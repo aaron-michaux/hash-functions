@@ -177,20 +177,9 @@ static inline void encode(uint8_t output[], const uint32_t input[], size_t len)
    }
 }
 
-//  --------------------------------------------------------------- Construction
-
-// default ctor, just initailize
-MD5::MD5() { init_(); }
-MD5::MD5(const std::string& text)
-{
-   init_();
-   append(text.c_str(), text.length());
-   finish();
-}
-
 //  ----------------------------------------------------------------------- Init
 
-void MD5::init_()
+void MD5::init_() noexcept
 {
    finalized_ = false;
 
@@ -207,7 +196,7 @@ void MD5::init_()
 //  ------------------------------------------------------------------ Transform
 
 // apply MD5 algo on a block
-void MD5::transform_(const uint8_t block[blocksize])
+void MD5::transform_(const uint8_t block[blocksize]) noexcept
 {
    uint32_t a = state_[0], b = state_[1], c = state_[2], d = state_[3], x[16];
    decode(x, block, blocksize);
@@ -294,10 +283,9 @@ void MD5::transform_(const uint8_t block[blocksize])
 }
 
 //////////////////////////////
-
 // MD5 block append operation. Continues an MD5 message-digest
 // operation, processing another message block
-void MD5::append(const unsigned char input[], size_t length)
+void MD5::update_(const unsigned char* input, size_t length) noexcept
 {
    if(length == 0) return;
    finalized_ = false;
@@ -333,95 +321,124 @@ void MD5::append(const unsigned char input[], size_t length)
 }
 
 //////////////////////////////
-
-// for convenience provide a verson with signed char
-
-void MD5::append(const std::string& text) { append(text.c_str(), text.size()); }
-
-void MD5::append(const char input[], size_t length)
-{
-   append(reinterpret_cast<const void*>(input), length);
-}
-
-void MD5::append(const void* buf, size_t length)
-{
-   append(reinterpret_cast<const unsigned char*>(buf), length);
-}
-
-//////////////////////////////
-
 // MD5 finalization. Ends an MD5 message-digest operation, writing the
 // the message digest and zeroizing the context.
-MD5& MD5::finish()
+MD5& MD5::do_finalize_() noexcept
 {
    static unsigned char padding[64]
        = {0x80, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
           0,    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
           0,    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 
+   // Save number of bits
+   unsigned char bits[8];
+   encode(bits, count_, 8);
+
+   // pad out to 56 mod 64.
+   size_t index  = count_[0] / 8 % 64;
+   size_t padLen = (index < 56) ? (56 - index) : (120 - index);
+   append(padding, padLen);
+
+   // Append length (before padding)
+   append(bits, 8);
+
+   // Store state in digest
+   encode(digest_, state_, 16);
+
+   // Zeroize sensitive information.
+   memset(buffer_, 0, sizeof buffer_);
+   memset(count_, 0, sizeof count_);
+
+   return *this;
+}
+
+//  --------------------------------------------------------------- Construction
+
+// default ctor, just initailize
+MD5::MD5() noexcept { init_(); }
+MD5::MD5(std::string_view text) noexcept
+{
+   init_();
+   append(text.data(), text.size());
+   finish();
+}
+
+// ---------------------------------------------------------------------- append
+
+void MD5::append(std::string_view text) noexcept
+{
+   append(text.data(), text.size());
+}
+
+void MD5::append(const unsigned char* input, size_t length) noexcept
+{
+   update_(input, length);
+}
+
+void MD5::append(const char* input, size_t length) noexcept
+{
+   append(reinterpret_cast<const void*>(input), length);
+}
+
+void MD5::append(const void* buf, size_t length) noexcept
+{
+   append(reinterpret_cast<const unsigned char*>(buf), length);
+}
+
+// ---------------------------------------------------------------------- finish
+
+MD5& MD5::finish() noexcept
+{
    if(!finalized_) {
-      // Save number of bits
-      unsigned char bits[8];
-      encode(bits, count_, 8);
-
-      // pad out to 56 mod 64.
-      size_t index  = count_[0] / 8 % 64;
-      size_t padLen = (index < 56) ? (56 - index) : (120 - index);
-      append(padding, padLen);
-
-      // Append length (before padding)
-      append(bits, 8);
-
-      // Store state in digest
-      encode(digest_, state_, 16);
-
-      // Zeroize sensitive information.
-      memset(buffer_, 0, sizeof buffer_);
-      memset(count_, 0, sizeof count_);
-
+      do_finalize_();
       finalized_ = true;
    }
 
    return *this;
 }
 
-//////////////////////////////
-
-std::string MD5::hexdigest()
-{
-   if(!finalized_) finish();
-   return static_cast<const MD5*>(this)->hexdigest();
-}
-
-// return hex representation of digest as string
-std::string MD5::hexdigest() const
-{
-   assert(finalized_);
-   char buf[33];
-   for(int i = 0; i < 16; ++i) sprintf(buf + i * 2, "%02x", digest_[i]);
-   buf[32] = '\0';
-
-   return std::string(buf);
-}
+// -----------------------------------------------------------------------------
 
 size_t MD5::digest_size() const noexcept { return 16; }
 
-void MD5::get_digest(unsigned char hash[16]) const
+void MD5::get_digest(unsigned char hash[16]) const noexcept
 {
-   if(!finalized_) const_cast<MD5*>(this)->finish();
+   // To make type "thread-compatible", Don't lazy-finish,
+   assert(finalized_); // You must call finish() before getting the digest
    memcpy(hash, digest_, 16);
 }
 
-std::array<unsigned char, 16> MD5::get_digest() const
+std::array<unsigned char, 16> MD5::get_digest() const noexcept
 {
    std::array<unsigned char, 16> hash;
    get_digest(&hash[0]);
    return hash;
 }
 
-//////////////////////////////
+// -----------------------------------------------------------------------------
 
-std::string md5(const std::string str)
+std::string MD5::hexdigest() noexcept
+{
+   if(!finalized_) finish();
+   return static_cast<const MD5*>(this)->hexdigest();
+}
+
+// return hex representation of digest as string
+std::string MD5::hexdigest() const noexcept
+{
+   uint8_t hash[16];
+   get_digest(hash);
+
+   char buf[33];
+   for(int i = 0; i < 16; ++i) sprintf(buf + i * 2, "%02x", hash[i]);
+   buf[32] = '\0';
+
+   return std::string(buf);
+}
+
+// -----------------------------------------------------------------------------
+
+std::string md5(std::string_view str) noexcept
 {
    MD5 md5;
    md5.append(str);
