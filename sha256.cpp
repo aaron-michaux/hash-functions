@@ -52,7 +52,7 @@ static const uint32_t k[64]
        0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2};
 
 /*********************** FUNCTION DEFINITIONS ***********************/
-void Sha256::transform_()
+void Sha256::transform_() noexcept
 {
    WORD a, b, c, d, e, f, g, h, i, j, t1, t2, m[64];
 
@@ -94,7 +94,7 @@ void Sha256::transform_()
    state[7] += h;
 }
 
-void Sha256::init_()
+void Sha256::init_() noexcept
 {
    datalen  = 0;
    bitlen   = 0;

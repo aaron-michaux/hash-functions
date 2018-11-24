@@ -38,8 +38,8 @@ class Sha256
    BYTE digest_[32];
    bool finalized_ = false;
 
-   void transform_();
-   void init_();
+   void transform_() noexcept;
+   void init_() noexcept;
    void update(const BYTE dat[], size_t len) noexcept;
    void final(BYTE hash[]) noexcept;
 };
